@@ -3,8 +3,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """
-    Класс с конфигурационными данными, необходимыми для подключения к БД
+    Класс с конфигурационными данными проекта
     """
+    PROJECT_NAME: str
+
     DB_HOST: str
     DB_PORT: int
     DB_USER: str
