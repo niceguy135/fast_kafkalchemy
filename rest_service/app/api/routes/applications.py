@@ -1,13 +1,14 @@
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi_pagination import Page, paginate
+from fastapi_pagination.utils import await_if_async
 
 from sqlalchemy import select
 
 from app.core.datebase import async_session_factory
 from app.models import ApplicationModel
-from app.dto_schemas import ApplicationDTO
+from app.dto_schemas import ApplicationDTO, ApplicationAddDTO
 
 
 router = APIRouter(prefix="/applications", tags=["apps"])
@@ -34,8 +35,16 @@ async def get_apps(username: str = None) -> Page[ApplicationDTO]:
 
 
 @router.post("/", tags=["create_app"])
-def create_app() -> Any:
+async def create_app(new_app: ApplicationAddDTO) -> HTTPException:
     """
     Создать заявку от пользователя
     """
-    pass
+    async with async_session_factory() as session:
+        new_app_model = ApplicationModel(
+            user_name=new_app.user_name,
+            description=new_app.description
+        )
+        session.add(new_app_model)
+        await session.commit()
+
+    return HTTPException(status_code=201, detail="New application has been created")
