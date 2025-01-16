@@ -6,7 +6,7 @@ WORKDIR /app/
 
 ENV PYTHONPATH=/app
 
-COPY ./alembic.ini /app/
+COPY ./alembic.ini ./prestart.sh /app/
 
 COPY ./app /app/app
 
