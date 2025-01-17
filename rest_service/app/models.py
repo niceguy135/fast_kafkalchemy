@@ -36,3 +36,6 @@ class ApplicationModel(BaseModel):
     user_name: Mapped[str_100]
     description: Mapped[str]
     created_at: Mapped[created_at]
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
