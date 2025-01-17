@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     KAFKA_IP: str
     KAFKA_PORT: int
+    KAFKA_NEW_APP_TOPIC: str
 
     @property
     def DATABASE_URL_asyncpg(self):
