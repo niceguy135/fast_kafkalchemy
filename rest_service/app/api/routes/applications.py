@@ -1,17 +1,25 @@
-from typing import Any
+import json
 
 from fastapi import APIRouter, HTTPException
 from fastapi_pagination import Page, paginate
-from fastapi_pagination.utils import await_if_async
 
 from sqlalchemy import select
+
+from aiokafka import AIOKafkaProducer
 
 from app.core.datebase import async_session_factory
 from app.models import ApplicationModel
 from app.dto_schemas import ApplicationDTO, ApplicationAddDTO
 
+from app.core.config import settings
 
 router = APIRouter(prefix="/applications", tags=["apps"])
+
+
+kafka_producer = AIOKafkaProducer(
+    bootstrap_servers=f"{settings.KAFKA_IP}:{settings.KAFKA_PORT}",
+    enable_idempotence=True
+)
 
 
 @router.get("/", tags=["get_apps"])
@@ -45,6 +53,14 @@ async def create_app(new_app: ApplicationAddDTO) -> HTTPException:
             description=new_app.description
         )
         session.add(new_app_model)
+        await session.flush()
+
+        kafka_app_value = json.dumps(new_app_model.as_dict(), default=str).encode()
+        await kafka_producer.send(
+            topic=settings.KAFKA_NEW_APP_TOPIC,
+            value=kafka_app_value
+        )
+
         await session.commit()
 
     return HTTPException(status_code=201, detail="New application has been created")
