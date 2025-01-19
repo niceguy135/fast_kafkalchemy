@@ -16,10 +16,8 @@ from app.core.config import settings
 router = APIRouter(prefix="/applications", tags=["apps"])
 
 
-kafka_producer = AIOKafkaProducer(
-    bootstrap_servers=f"{settings.KAFKA_IP}:{settings.KAFKA_PORT}",
-    enable_idempotence=True
-)
+def aiokafka_value_serializer(value) -> bytes:
+    return json.dumps(value, default=str).encode()
 
 
 @router.get("/", tags=["get_apps"])
@@ -42,8 +40,8 @@ async def get_apps(username: str = None) -> Page[ApplicationDTO]:
     return paginate([ApplicationDTO.model_validate(row, from_attributes=True) for row in achievements])
 
 
-@router.post("/", tags=["create_app"])
-async def create_app(new_app: ApplicationAddDTO) -> HTTPException:
+@router.post("/", tags=["create_app"], status_code=201)
+async def create_app(new_app: ApplicationAddDTO):
     """
     Создать заявку от пользователя
     """
@@ -53,14 +51,22 @@ async def create_app(new_app: ApplicationAddDTO) -> HTTPException:
             description=new_app.description
         )
         session.add(new_app_model)
+
         await session.flush()
-
-        kafka_app_value = json.dumps(new_app_model.as_dict(), default=str).encode()
-        await kafka_producer.send(
-            topic=settings.KAFKA_NEW_APP_TOPIC,
-            value=kafka_app_value
-        )
-
+        created_app_data = new_app_model.as_dict()
         await session.commit()
 
-    return HTTPException(status_code=201, detail="New application has been created")
+    kafka_producer = AIOKafkaProducer(
+        bootstrap_servers=f"{settings.KAFKA_IP}:{settings.KAFKA_PORT}",
+        enable_idempotence=True,
+        value_serializer=aiokafka_value_serializer
+    )
+
+    await kafka_producer.start()
+    await kafka_producer.send(
+        topic=settings.KAFKA_NEW_APP_TOPIC,
+        value=created_app_data
+    )
+    await kafka_producer.stop()
+
+    return {"message": "New application has been created"}
