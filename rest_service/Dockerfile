@@ -6,6 +6,10 @@ WORKDIR /app/
 
 ENV PYTHONPATH=/app
 
+COPY ./requirements.txt /app/
+
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY ./alembic.ini ./prestart.sh /app/
 
 COPY ./app /app/app
