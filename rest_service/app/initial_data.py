@@ -1,7 +1,5 @@
 import logging
 
-from sqlalchemy import select
-
 from app.core.datebase import sync_session_factory
 from app.models import ApplicationModel
 
@@ -11,23 +9,26 @@ logger = logging.getLogger(__name__)
 
 def init_db() -> None:
     """
-    Функция инициализации начальных данных для базы данных.
+    Функция инициализации начальных записей для базы данных.
 
     Запускать только после срабатывания миграции!
     """
-    with sync_session_factory() as session:
-        template_username = "Иван Иванович"
-        template_app = ApplicationModel(
-            user_name=template_username,
-            description="Я хочу кушать("
-        )
+    try:
+        with sync_session_factory() as session:
+            template_username = "Иван Иванович"
 
-        user = session.execute(
-            select(ApplicationModel).where(ApplicationModel.user_name == template_username)
-        ).first()
-        if not user:
-            session.add(template_app)
+            for num in range(10):
+                template_app = ApplicationModel(
+                    user_name=template_username,
+                    description=f"Тестовая заявка №{num}"
+                )
+
+                session.add(template_app)
+                session.flush()
+
             session.commit()
+    except Exception as e:
+        logger.error(f"Cant initialize init data to database! Cause: {e}")
 
 
 def main() -> None:
