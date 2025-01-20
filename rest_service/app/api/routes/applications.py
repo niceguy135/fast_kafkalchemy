@@ -1,19 +1,19 @@
 import json
-
-from fastapi import APIRouter
-from fastapi_pagination import Page, paginate
-
-from sqlalchemy import select
+import logging
 
 from aiokafka import AIOKafkaProducer
-
-from app.core.datebase import async_session_factory
-from app.models import ApplicationModel
-from app.dto_schemas import ApplicationDTO, ApplicationAddDTO
+from fastapi import APIRouter
+from fastapi_pagination import Page, paginate
+from sqlalchemy import select
 
 from app.core.config import settings
+from app.core.datebase import async_session_factory
+from app.dto_schemas import ApplicationDTO, ApplicationAddDTO
+from app.models import ApplicationModel
 
 router = APIRouter(prefix="/applications")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def aiokafka_value_serializer(value) -> bytes:
@@ -56,17 +56,25 @@ async def create_app(new_app: ApplicationAddDTO):
         created_app_data = new_app_model.as_dict()
         await session.commit()
 
-    kafka_producer = AIOKafkaProducer(
-        bootstrap_servers=f"{settings.KAFKA_IP}:{settings.KAFKA_PORT}",
-        enable_idempotence=True,
-        value_serializer=aiokafka_value_serializer
-    )
+    try:
+        kafka_producer = AIOKafkaProducer(
+            bootstrap_servers=f"{settings.KAFKA_IP}:{settings.KAFKA_PORT}",
+            enable_idempotence=True,
+            value_serializer=aiokafka_value_serializer
+        )
 
-    await kafka_producer.start()
-    await kafka_producer.send(
-        topic=settings.KAFKA_NEW_APP_TOPIC,
-        value=created_app_data
-    )
-    await kafka_producer.stop()
+        try:
+            await kafka_producer.start()
+            await kafka_producer.send(
+                topic=settings.KAFKA_NEW_APP_TOPIC,
+                value=created_app_data
+            )
+        except Exception as e:
+            logger.error(f"Cant start connection and send message to Kafka! Cause: {e}")
+        finally:
+            await kafka_producer.stop()
+
+    except Exception as e:
+        logger.error(f"Cant create a new aiokafka producer! Cause: {e}")
 
     return {"message": "New application has been created"}
