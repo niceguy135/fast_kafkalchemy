@@ -4,6 +4,7 @@ import logging
 from aiokafka import AIOKafkaProducer
 from fastapi import APIRouter
 from fastapi_pagination import Page, paginate
+from fastapi_pagination.utils import disable_installed_extensions_check
 from sqlalchemy import select
 
 from app.core.config import settings
@@ -37,6 +38,7 @@ async def get_apps(username: str) -> Page[ApplicationDTO]:
         query_result = await session.execute(query)
         achievements = query_result.scalars().all()
 
+    disable_installed_extensions_check()
     return paginate([ApplicationDTO.model_validate(row, from_attributes=True) for row in achievements])
 
 
