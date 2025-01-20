@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi_pagination import Page, paginate
 
 from sqlalchemy import select
@@ -13,7 +13,7 @@ from app.dto_schemas import ApplicationDTO, ApplicationAddDTO
 
 from app.core.config import settings
 
-router = APIRouter(prefix="/applications", tags=["apps"])
+router = APIRouter(prefix="/applications")
 
 
 def aiokafka_value_serializer(value) -> bytes:
@@ -21,7 +21,7 @@ def aiokafka_value_serializer(value) -> bytes:
 
 
 @router.get("/", tags=["get_apps"])
-async def get_apps(username: str = None) -> Page[ApplicationDTO]:
+async def get_apps(username: str) -> Page[ApplicationDTO]:
     """
     Получить список заявок от всех пользователей или от конкретного пользователя
     """
