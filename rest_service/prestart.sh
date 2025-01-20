@@ -3,7 +3,7 @@
 set -e
 set -x
 
-python app/backend_pre_start.py
+python app/rest_prestart.py
 
 alembic upgrade head
 

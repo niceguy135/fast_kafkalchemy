@@ -25,7 +25,7 @@ def check_connection() -> None:
     """
     try:
         with sync_session_factory() as session:
-            session.exec(select(1))
+            session.execute(select(1))
     except Exception as e:
         logger.error(e)
         raise e
